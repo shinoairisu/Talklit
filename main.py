@@ -50,7 +50,7 @@ def get_markdown():
      for i in sout:
           for j in i["data"][::-1]:
                cont=j.split("\t")
-               if cont[1].find("@all")>=0 or cont[1].find(f"{st.session_state['sid']}")>=0:
+               if cont[1].find("@all")>=0 or cont[1].find(f"@{st.session_state['sid']}")>=0 or cont[0]==f"{st.session_state['sid']}":
                     talks+=f"### {cont[0]}说：\n"
                     newcont=cont[1].replace("@all","")
                     newcont=newcont.replace(f"@{st.session_state['sid']}","")
