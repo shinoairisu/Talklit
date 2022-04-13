@@ -24,6 +24,13 @@ def index():
           con.empty()
           ccon=con.container()
           ccon.title("在这里，可以发现新的朋友！")
+          strs="## 现有注册用户id有:\n"
+          db = TinyDB('userdb.json')
+          em = db.all()
+          for i in em:
+               strs+=f"* {i['sid']}\n"
+          strs+="## 使用说明：\n默认所有信息为广播。\n可以使用@+id单独讲消息推送给某人。"
+          ccon.markdown(strs)
      elif sbx=="注册":
           signup(con)
      elif sbx=="登录":
