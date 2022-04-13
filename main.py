@@ -4,6 +4,60 @@ import numpy as np
 from tinydb import TinyDB, Query
 import hashlib
 import time
+import _thread
+from datetime import datetime
+#会话存储原理：按 年-月-日键值对 存储在数据库中。每次打开只能看见当天的聊天信息。
+
+def get_date():
+     strs=f"{datetime.now().year}-{datetime.now().month}-{datetime.now().day}"
+     return strs
+
+#查询数据
+def get_data():
+     db = TinyDB('userdb.json')
+     Talk = Query()
+     date_str=get_date()
+     sout=db.search(Talk.date==date_str)
+     if len(sout)==0:
+          db.insert({'date':date_str,'data':[f"系统\t@all今天是{date_str}，欢迎大家光临！"]})
+          sout=db.search(Talk.date==date_str)
+          db.close()
+          return sout
+     else:
+          db.close()
+          return sout
+
+#插入数据
+def insert_data(strs):
+     db = TinyDB('userdb.json')
+     Talk = Query()
+     date_str=get_date()
+     sout=db.search(Talk.date==date_str)
+     if len(sout)==0:
+          db.insert({'date':date_str,'data':[f"系统\t@all今天是{date_str}，欢迎大家光临！"]})
+          db.update({'data':[strs]},Talk.date==date_str)
+          db.close()
+     else:
+          sout[0]['data'].append(strs)
+          db.update({'data':sout[0]['data']},Talk.date==date_str)
+          db.close()
+
+
+#获取聊天内容
+def get_markdown():
+     sout=get_data()
+     talks=""
+     for i in sout:
+          for j in i["data"][::-1]:
+               cont=j.split("\t")
+               if cont[1].find("@all")>=0 or cont[1].find(f"@{st.session_state['sid']}")>=0:
+                    talks+=f"### {cont[0]}说：\n"
+                    newcont=cont[1].replace("@all","")
+                    newcont=newcont.replace(f"@{st.session_state['sid']}","")
+                    talks+=f"{newcont}\n"
+
+     return talks
+
 
 def index():
      st.title('欢迎使用Talklit聊天室！')
@@ -25,9 +79,10 @@ def index():
           db = TinyDB('userdb.json')
           em = db.all()
           for i in em:
-               strs+=f"* {i['sid']}\n"
+               if 'sid' in i:
+                    strs+=f"* {i['sid']}\n"
           db.close()
-          strs+="## 使用说明：\n默认所有信息为广播。\n可以使用@+id单独讲消息推送给某人。"
+          strs+="## 使用说明：\n默认所有信息为广播。\n\n可以使用@+id单独讲消息推送给某人。\n\n由于条件限制，除了首次登录，需要手动刷新聊天界面数据。"
           ccon.markdown(strs)
      elif sbx=="注册":
           signup(con)
@@ -101,7 +156,36 @@ def login(con):
 def chatroom(con):
      con.empty()
      ccon=con.container()
-     ccon.write("施工中...")
+     if 'sid' not in st.session_state:
+          ccon.title('您未登录，请先注册。')
+     else:
+          form=ccon.form("chat")
+          contents=form.text_input("输入你想说的话吧，对某人说请加上@xx")
+          #存储结构：  发送者\t发送内容。@all就是群发，@id就是某人单独的。不加@就是默认all。
+          submitted = form.form_submit_button("发射")
+          flash=ccon.button('刷新聊天内容')
+          mark=get_markdown()
+          if mark=="":
+               ccon.write("此地还是荒原，赶紧聊天填充吧！")
+          mk=ccon.markdown(mark)
+          if submitted:
+               strs=""
+               if contents!="":
+                    if contents.find("@")>=0:
+                         strs=st.session_state['sid']+"\t"+contents
+                         insert_data(strs)
+                    else:
+                         strs=st.session_state['sid']+"\t@all"+contents
+                         insert_data(strs)
+               else:
+                    form.error('不能发送空字符串！')
+               mk.empty()
+               mk=ccon.markdown(get_markdown())
+          if flash:
+               form.success('刷新完成！')
+               mk.empty()
+               mk=ccon.markdown(get_markdown())
+
 
 
 
