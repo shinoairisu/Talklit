@@ -157,7 +157,7 @@ def chatroom(con):
      con.empty()
      ccon=con.container()
      if 'sid' not in st.session_state:
-          ccon.title('您未登录，请先注册。')
+          ccon.title('您未登录，请先登录。')
      else:
           form=ccon.form("chat")
           contents=form.text_input("输入你想说的话吧，对某人说请加上@xx")
